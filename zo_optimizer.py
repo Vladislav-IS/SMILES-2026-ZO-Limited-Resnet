@@ -63,12 +63,18 @@ class ZeroOrderOptimizer:
         self,
         model: nn.Module,
         lr: float = 1e-3,
-        eps: float = 1e-3,
+        zo_eps: float = 1e-3,
         perturbation_mode: str = "gaussian",
+        beta_1: float = 0.9,
+        beta_2: float = 0.999,
+        adam_eps: float = 1e-6,
+        min_val: float = -1,
+        max_val: float = 1,
+        directions = 4
     ) -> None:
         self.model = model
         self.lr = lr
-        self.eps = eps
+        self.zo_eps = zo_eps
 
         if perturbation_mode not in ("gaussian", "uniform"):
             raise ValueError(
@@ -76,6 +82,16 @@ class ZeroOrderOptimizer:
                 f"got '{perturbation_mode}'"
             )
         self.perturbation_mode = perturbation_mode
+
+        self.t = 1
+        self.m = {}
+        self.v = {}
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.adam_eps = adam_eps
+        self.min_val = min_val
+        self.max_val = max_val
+        self.directions = directions
 
         # ------------------------------------------------------------------
         # STUDENT: Set self.layer_names to the parameters you want to tune.
@@ -171,25 +187,28 @@ class ZeroOrderOptimizer:
         # ------------------------------------------------------------------
         # STUDENT: Replace or extend the gradient estimation below.
         # ------------------------------------------------------------------
-        grads: dict[str, torch.Tensor] = {}
+        grads: dict[str, torch.Tensor] = {name: torch.zeros_like(param) for name, param in params.items()}
 
         with torch.no_grad():
-            for name, param in params.items():
-                u = self._sample_direction(param)
+            for _ in range(self.directions):
+                us = {name: self._sample_direction(param) for name, param in params.items()}
+                for name, param in params.items():
+                    # f(x + eps * u)
+                    param.data.add_(self.zo_eps * us[name])
 
-                # f(x + eps * u)
-                param.data.add_(self.eps * u)
                 f_plus = loss_fn()
 
-                # f(x - eps * u)  — restore then subtract
-                param.data.sub_(2.0 * self.eps * u)
+                for name, param in params.items():
+                    # f(x - eps * u)  — restore then subtract
+                    param.data.sub_(2.0 * self.zo_eps * us[name])
+                
                 f_minus = loss_fn()
 
-                # Restore original value
-                param.data.add_(self.eps * u)
-
-                grad_estimate = ((f_plus - f_minus) / (2.0 * self.eps)) * u
-                grads[name] = grad_estimate
+                for name, param in params.items():
+                    # Restore original value
+                    param.data.add_(self.zo_eps * us[name])
+                    grad_estimate = ((f_plus - f_minus) / (2.0 * self.zo_eps)) * us[name]
+                    grads[name] += grad_estimate / self.directions
 
         return grads
         # ------------------------------------------------------------------
@@ -220,7 +239,15 @@ class ZeroOrderOptimizer:
         # ------------------------------------------------------------------
         with torch.no_grad():
             for name, param in params.items():
-                param.data.sub_(self.lr * grads[name])
+                if name not in self.m.keys():
+                    self.m[name] = torch.zeros_like(grads[name])
+                if name not in self.v.keys():
+                    self.v[name] = torch.zeros_like(grads[name])
+                self.m[name] = self.beta_1 * self.m[name] + (1 - self.beta_1) * grads[name]
+                self.v[name] = self.beta_2 * self.v[name] + (1 - self.beta_2) * (grads[name] ** 2)
+                m_hat = self.m[name] / (1 - self.beta_1 ** self.t)
+                v_hat_sqrt = torch.sqrt(self.v[name] / (1 - self.beta_2 ** self.t))
+                param.data.sub_(self.lr * torch.clamp(m_hat / (v_hat_sqrt + self.adam_eps), self.min_val, self.max_val))
         # ------------------------------------------------------------------
 
     # ------------------------------------------------------------------
