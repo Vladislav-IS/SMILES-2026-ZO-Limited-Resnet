@@ -70,7 +70,7 @@ class ZeroOrderOptimizer:
         adam_eps: float = 1e-6,
         min_val: float = -1,
         max_val: float = 1,
-        directions = 4
+        directions: int = 4
     ) -> None:
         self.model = model
         self.lr = lr
@@ -247,7 +247,7 @@ class ZeroOrderOptimizer:
                 self.v[name] = self.beta_2 * self.v[name] + (1 - self.beta_2) * (grads[name] ** 2)
                 m_hat = self.m[name] / (1 - self.beta_1 ** self.t)
                 v_hat_sqrt = torch.sqrt(self.v[name] / (1 - self.beta_2 ** self.t))
-                param.data.sub_(self.lr * torch.clamp(m_hat / (v_hat_sqrt + self.adam_eps), self.min_val, self.max_val))
+                param.data.sub_(torch.clamp(self.lr * m_hat / (v_hat_sqrt + self.adam_eps), self.min_val, self.max_val))
         # ------------------------------------------------------------------
 
     # ------------------------------------------------------------------
@@ -285,5 +285,7 @@ class ZeroOrderOptimizer:
 
         grads = self._estimate_grad(loss_fn, params)
         self._update_params(params, grads)
+
+        self.t += 1
 
         return float(loss_before)
