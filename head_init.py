@@ -32,6 +32,6 @@ def init_last_layer(layer: nn.Linear) -> None:
     # -------------------------------------------------------------------------
     # STUDENT: Replace or extend the initialization below.
     # -------------------------------------------------------------------------
-    nn.init.xavier_uniform_(layer.weight)
+    nn.init.normal_(layer.weight, mean=0.0, std=1e-3)
     nn.init.zeros_(layer.bias)
     # -------------------------------------------------------------------------

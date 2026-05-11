@@ -22,7 +22,7 @@ Key design points
 from __future__ import annotations
 
 import math
-from typing import Callable
+from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -67,10 +67,11 @@ class ZeroOrderOptimizer:
         perturbation_mode: str = "gaussian",
         beta_1: float = 0.9,
         beta_2: float = 0.999,
-        adam_eps: float = 1e-6,
+        adam_eps: float = 1e-8,
         min_val: float = -1,
         max_val: float = 1,
-        directions: int = 4
+        directions: int = 200,
+        max_grad_norm: Optional[float] = 0.5
     ) -> None:
         self.model = model
         self.lr = lr
@@ -237,7 +238,15 @@ class ZeroOrderOptimizer:
         # ------------------------------------------------------------------
         # STUDENT: Replace or extend the parameter update below.
         # ------------------------------------------------------------------
+
         with torch.no_grad():
+            if self.max_grad_norm and self.max_grad_norm > 0:
+                total_norm = torch.norm(torch.stack([g.norm() for g in grads.values()]))
+                scale = min(1.0, self.max_grad_norm / (total_norm + 1e-6))
+                if scale < 1.0:
+                    for n in grads:
+                        grads[n] *= scale
+
             for name, param in params.items():
                 if name not in self.m.keys():
                     self.m[name] = torch.zeros_like(grads[name])
