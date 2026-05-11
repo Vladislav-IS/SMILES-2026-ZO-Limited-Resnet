@@ -93,6 +93,7 @@ class ZeroOrderOptimizer:
         self.min_val = min_val
         self.max_val = max_val
         self.directions = directions
+        self.max_grad_norm = max_grad_norm
 
         # ------------------------------------------------------------------
         # STUDENT: Set self.layer_names to the parameters you want to tune.

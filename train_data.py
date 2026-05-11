@@ -30,7 +30,8 @@ def get_train_dataset_loader(
     for cls in range(N_CLASSES):
         n = samples_per_class + (1 if cls < remainder else 0)
         balanced += class_indices[cls][:n]
-    np.random.shuffle(balanced, seed=SEED)
+    np.random.seed(SEED)
+    np.random.shuffle(balanced)
     train_dataset = Subset(dataset, balanced)
     train_loader = DataLoader(
         train_dataset,
