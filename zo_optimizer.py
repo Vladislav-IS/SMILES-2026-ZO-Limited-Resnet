@@ -70,7 +70,7 @@ class ZeroOrderOptimizer:
         adam_eps: float = 1e-8,
         min_val: float = -1,
         max_val: float = 1,
-        directions: int = 200,
+        directions: int = 300,
         max_grad_norm: Optional[float] = 0.5
     ) -> None:
         self.model = model
