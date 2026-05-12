@@ -24,7 +24,7 @@ python validate.py \
 
 ### 1. `head_init.py`
 
-I replaced `nn.kaiming_uniform_` with `nn.normal_` ($mean=0$, $std=10^-3$) for `layer.weight`. `layer.bias` remained initialised with `nn.init.zeros_`.
+I replaced `nn.kaiming_uniform_` with `nn.normal_` ($mean=0$, $std=10^{-3}$) for `layer.weight`. `layer.bias` remained initialised with `nn.init.zeros_`.
 
 ### 2. `train_data.py`
 
