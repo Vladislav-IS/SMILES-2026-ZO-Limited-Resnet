@@ -67,7 +67,7 @@ class ZeroOrderOptimizer:
         beta_1: float = 0.9,
         beta_2: float = 0.999,
         adam_eps: float = 1e-8,
-        directions: int = 300
+        directions: int = 300,
     ) -> None:
         self.model = model
         self.lr = lr
@@ -121,13 +121,14 @@ class ZeroOrderOptimizer:
         """
         if self.perturbation_mode == "gaussian":
             u = torch.randn_like(param)
-        else: 
+        else:
             u = torch.rand_like(param) * 2.0 - 1.0
 
         norm = u.norm()
         if norm > 0:
             u = u / norm
         return u
+
     def _estimate_grad(
         self,
         loss_fn: Callable[[], float],
@@ -160,10 +161,15 @@ class ZeroOrderOptimizer:
         Student task:
             Replace this with a more efficient or accurate estimator:
         """
-        grads: dict[str, torch.Tensor] = {name: torch.zeros_like(param) for name, param in params.items()}
+        grads: dict[str, torch.Tensor] = {
+            name: torch.zeros_like(param) for name, param in params.items()
+        }
         with torch.no_grad():
             for _ in range(self.directions):
-                us = {name: self._sample_direction(param) for name, param in params.items()}
+                us = {
+                    name: self._sample_direction(param)
+                    for name, param in params.items()
+                }
                 for name, param in params.items():
                     param.data.add_(self.zo_eps * us[name])
                 f_plus = loss_fn()
@@ -172,7 +178,9 @@ class ZeroOrderOptimizer:
                 f_minus = loss_fn()
                 for name, param in params.items():
                     param.data.add_(self.zo_eps * us[name])
-                    grad_estimate = ((f_plus - f_minus) / (2.0 * self.zo_eps)) * us[name]
+                    grad_estimate = ((f_plus - f_minus) / (2.0 * self.zo_eps)) * us[
+                        name
+                    ]
                     grads[name] += grad_estimate / self.directions
         return grads
 
@@ -203,10 +211,14 @@ class ZeroOrderOptimizer:
                     self.m[name] = torch.zeros_like(grads[name])
                 if name not in self.v.keys():
                     self.v[name] = torch.zeros_like(grads[name])
-                self.m[name] = self.beta_1 * self.m[name] + (1 - self.beta_1) * grads[name]
-                self.v[name] = self.beta_2 * self.v[name] + (1 - self.beta_2) * (grads[name] ** 2)
-                m_hat = self.m[name] / (1 - self.beta_1 ** self.t)
-                v_hat_sqrt = torch.sqrt(self.v[name] / (1 - self.beta_2 ** self.t))
+                self.m[name] = (
+                    self.beta_1 * self.m[name] + (1 - self.beta_1) * grads[name]
+                )
+                self.v[name] = self.beta_2 * self.v[name] + (1 - self.beta_2) * (
+                    grads[name] ** 2
+                )
+                m_hat = self.m[name] / (1 - self.beta_1**self.t)
+                v_hat_sqrt = torch.sqrt(self.v[name] / (1 - self.beta_2**self.t))
                 param.data.sub_(self.lr * m_hat / (v_hat_sqrt + self.adam_eps))
 
     def step(self, loss_fn: Callable[[], float]) -> float:

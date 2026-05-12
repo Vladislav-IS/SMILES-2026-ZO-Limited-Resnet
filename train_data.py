@@ -4,10 +4,11 @@ import numpy as np
 
 from augmentation import get_transforms
 
-USE_TRAIN_SUBSET_ONLY=True
-MAX_SAMPLES=8192
-N_CLASSES=100
-SEED=0xDEAD
+USE_TRAIN_SUBSET_ONLY = True
+MAX_SAMPLES = 8192
+N_CLASSES = 100
+SEED = 0xDEAD
+
 
 def get_train_dataset_loader(
     data_dir,
@@ -17,7 +18,7 @@ def get_train_dataset_loader(
     assert USE_TRAIN_SUBSET_ONLY, "USE_TRAIN_SUBSET_ONLY must be True"
     dataset = datasets.CIFAR100(
         root=data_dir,
-        train=USE_TRAIN_SUBSET_ONLY, 
+        train=USE_TRAIN_SUBSET_ONLY,
         download=True,
         transform=get_transforms(train=True),
     )
@@ -30,8 +31,8 @@ def get_train_dataset_loader(
     for cls in range(N_CLASSES):
         n = samples_cls + (1 if cls < remain else 0)
         balanced += class_indices[cls][:n]
-    #np.random.seed(SEED)
-    #np.random.shuffle(balanced)
+    # np.random.seed(SEED)
+    # np.random.shuffle(balanced)
     train_dataset = Subset(dataset, balanced)
     train_loader = DataLoader(
         train_dataset,
@@ -39,6 +40,6 @@ def get_train_dataset_loader(
         shuffle=True,
         num_workers=0,
         pin_memory=True,
-        generator=generator_train
+        generator=generator_train,
     )
     return train_dataset, train_loader
