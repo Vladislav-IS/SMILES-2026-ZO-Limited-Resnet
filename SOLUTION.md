@@ -62,4 +62,6 @@ During experiments, I tried:
 
 - changing optimizer learning rate. Increasing the learning rate in a narrow range caused the optimizer to diverge, while decreasing it caused it to stop converging;
 
-- changing `batch_size` and `n_batches` values. The current parameters yielded the best result.
+- changing `batch_size` and `n_batches` values. The current parameters yielded the best result;
+
+- changing the list of fine‑tuned layers. Increasing the list led to worse convergence.
