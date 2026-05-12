@@ -21,8 +21,7 @@ Key design points
 
 from __future__ import annotations
 
-import math
-from typing import Callable, Optional
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -68,49 +67,25 @@ class ZeroOrderOptimizer:
         beta_1: float = 0.9,
         beta_2: float = 0.999,
         adam_eps: float = 1e-8,
-        min_val: float = -1,
-        max_val: float = 1,
-        directions: int = 300,
-        max_grad_norm: Optional[float] = 0.5
+        directions: int = 300
     ) -> None:
         self.model = model
         self.lr = lr
         self.zo_eps = zo_eps
-
         if perturbation_mode not in ("gaussian", "uniform"):
             raise ValueError(
                 f"perturbation_mode must be 'gaussian' or 'uniform', "
                 f"got '{perturbation_mode}'"
             )
         self.perturbation_mode = perturbation_mode
-
         self.t = 1
         self.m = {}
         self.v = {}
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.adam_eps = adam_eps
-        self.min_val = min_val
-        self.max_val = max_val
         self.directions = directions
-        self.max_grad_norm = max_grad_norm
-
-        # ------------------------------------------------------------------
-        # STUDENT: Set self.layer_names to the parameters you want to tune.
-        #
-        # The default below selects only the final classification head.
-        # You may replace this with any subset of named parameters, e.g.:
-        #   self.layer_names = ["layer4.1.conv2.weight", "fc.weight", "fc.bias"]
-        #
-        # You can also update self.layer_names inside .step() to implement
-        # a dynamic schedule (e.g. gradually unfreeze deeper layers).
-        # ------------------------------------------------------------------
         self.layer_names: list[str] = ["fc.weight", "fc.bias"]
-        # ------------------------------------------------------------------
-
-    # ------------------------------------------------------------------
-    # Internal helpers — students may modify these.
-    # ------------------------------------------------------------------
 
     def _active_params(self) -> dict[str, nn.Parameter]:
         """Return a mapping from name → parameter for all active layer names.
@@ -146,14 +121,13 @@ class ZeroOrderOptimizer:
         """
         if self.perturbation_mode == "gaussian":
             u = torch.randn_like(param)
-        else:  # uniform
+        else: 
             u = torch.rand_like(param) * 2.0 - 1.0
 
         norm = u.norm()
         if norm > 0:
             u = u / norm
         return u
-
     def _estimate_grad(
         self,
         loss_fn: Callable[[], float],
@@ -186,34 +160,21 @@ class ZeroOrderOptimizer:
         Student task:
             Replace this with a more efficient or accurate estimator:
         """
-        # ------------------------------------------------------------------
-        # STUDENT: Replace or extend the gradient estimation below.
-        # ------------------------------------------------------------------
         grads: dict[str, torch.Tensor] = {name: torch.zeros_like(param) for name, param in params.items()}
-
         with torch.no_grad():
             for _ in range(self.directions):
                 us = {name: self._sample_direction(param) for name, param in params.items()}
                 for name, param in params.items():
-                    # f(x + eps * u)
                     param.data.add_(self.zo_eps * us[name])
-
                 f_plus = loss_fn()
-
                 for name, param in params.items():
-                    # f(x - eps * u)  — restore then subtract
                     param.data.sub_(2.0 * self.zo_eps * us[name])
-                
                 f_minus = loss_fn()
-
                 for name, param in params.items():
-                    # Restore original value
                     param.data.add_(self.zo_eps * us[name])
                     grad_estimate = ((f_plus - f_minus) / (2.0 * self.zo_eps)) * us[name]
                     grads[name] += grad_estimate / self.directions
-
         return grads
-        # ------------------------------------------------------------------
 
     def _update_params(
         self,
@@ -236,18 +197,7 @@ class ZeroOrderOptimizer:
               - Adam-style: maintain first and second moment estimates.
               - Clipped update: ``p ← p - lr * clip(grad, max_norm)``.
         """
-        # ------------------------------------------------------------------
-        # STUDENT: Replace or extend the parameter update below.
-        # ------------------------------------------------------------------
-
         with torch.no_grad():
-            if self.max_grad_norm and self.max_grad_norm > 0:
-                total_norm = torch.norm(torch.stack([g.norm() for g in grads.values()]))
-                scale = min(1.0, self.max_grad_norm / (total_norm + 1e-6))
-                if scale < 1.0:
-                    for n in grads:
-                        grads[n] *= scale
-
             for name, param in params.items():
                 if name not in self.m.keys():
                     self.m[name] = torch.zeros_like(grads[name])
@@ -257,12 +207,7 @@ class ZeroOrderOptimizer:
                 self.v[name] = self.beta_2 * self.v[name] + (1 - self.beta_2) * (grads[name] ** 2)
                 m_hat = self.m[name] / (1 - self.beta_1 ** self.t)
                 v_hat_sqrt = torch.sqrt(self.v[name] / (1 - self.beta_2 ** self.t))
-                param.data.sub_(torch.clamp(self.lr * m_hat / (v_hat_sqrt + self.adam_eps), self.min_val, self.max_val))
-        # ------------------------------------------------------------------
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+                param.data.sub_(self.lr * m_hat / (v_hat_sqrt + self.adam_eps))
 
     def step(self, loss_fn: Callable[[], float]) -> float:
         """Perform one zero-order optimisation step.
@@ -288,14 +233,9 @@ class ZeroOrderOptimizer:
             budget, so prefer estimators that minimise the number of calls.
         """
         params = self._active_params()
-
-        # Record the loss before any perturbation.
         with torch.no_grad():
             loss_before = loss_fn()
-
         grads = self._estimate_grad(loss_fn, params)
         self._update_params(params, grads)
-
         self.t += 1
-
         return float(loss_before)

@@ -7,7 +7,6 @@ Kaiming uniform weights and zero bias — you are expected to experiment with
 alternatives (e.g. Xavier, orthogonal, small-scale random, learned bias init).
 """
 
-import torch
 import torch.nn as nn
 
 
@@ -29,9 +28,5 @@ def init_last_layer(layer: nn.Linear) -> None:
           - Small-scale init (e.g. scale weights by 0.01) — conservative start
           - Non-zero bias init           — useful when class priors are known
     """
-    # -------------------------------------------------------------------------
-    # STUDENT: Replace or extend the initialization below.
-    # -------------------------------------------------------------------------
     nn.init.normal_(layer.weight, mean=0.0, std=1e-3)
     nn.init.zeros_(layer.bias)
-    # -------------------------------------------------------------------------

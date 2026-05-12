@@ -10,7 +10,6 @@ input expected by the pretrained ResNet18 backbone.
 
 import torchvision.transforms as T
 
-# Per-channel mean and std computed on the CIFAR100 training set.
 _CIFAR100_MEAN = (0.5071, 0.4867, 0.4408)
 _CIFAR100_STD = (0.2675, 0.2565, 0.2761)
 
@@ -41,27 +40,13 @@ def get_transforms(train: bool) -> T.Compose:
     if train:
         return T.Compose(
             [
-                # ----------------------------------------------------------
-                # STUDENT: Extend the training pipeline below.
-                # Keep the Resize and Normalize steps; add augmentations
-                # between or around them as appropriate.
-                # ----------------------------------------------------------
                 T.Resize(224),
                 T.RandomHorizontalFlip(),
-                # Add more augmentations here ↓
-                #T.RandomCrop(224, padding=28),
-                #T.RandomHorizontalFlip(),
-                #T.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-                #T.RandomRotation(degrees=15),
-                #T.AutoAugment(T.AutoAugmentPolicy.CIFAR10),
                 T.ToTensor(),
                 T.Normalize(mean=_CIFAR100_MEAN, std=_CIFAR100_STD),
-                #T.RandomErasing(p=0.2),
-                # ----------------------------------------------------------
             ]
         )
     else:
-        # Fixed validation pipeline — do not modify.
         return T.Compose(
             [
                 T.Resize(224),
