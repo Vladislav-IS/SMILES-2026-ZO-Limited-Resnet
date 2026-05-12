@@ -36,7 +36,7 @@ The file remained untouched.
 
 ### 4. `zo_optimizer.py`
 
-I replaced the simple 2-point estimator with SPSA using `gaussian` noise sampling and 300 independent directions to reduce variance of gradient estimation. I used Adam optimizer with fixed $lr=10^{-3}$, $\beta_1=0.9$, $\beta_2=0.999$. Optimizing layers are `fc.weight`, `fc.bias`. `batch_size = 32`, and `n_batches` = 256.
+I replaced the simple 2-point estimator with SPSA using `gaussian` noise sampling and 300 independent directions to reduce variance of gradient estimation. I used Adam optimizer with fixed $lr=10^{-3}$, $\beta_1=0.9$, $\beta_2=0.999$. Optimizing layers are `fc.weight`, `fc.bias`. `batch_size` = 32, and `n_batches` = 256.
 
 ### 5. Final results
 
